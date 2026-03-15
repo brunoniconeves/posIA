@@ -78,6 +78,14 @@ async function trainModel(inputXs, outputYs) {
     return model;
 }
 
+async function predict(model, pessoaTensorNormalizado) {
+    // transformar um array em um tensor
+    const tfInput = tf.tensor2d([pessoaTensorNormalizado]);
+    const prediction = await model.predict(tfInput);
+    const predictionArray = await prediction.array();
+    return predictionArray[0].map((prob, index) => ({prob, index}));
+}
+
 // Exemplo de pessoas para treino (cada pessoa com idade, cor e localização)
 // const pessoas = [
 //     { nome: "Erick", idade: 30, cor: "azul", localizacao: "São Paulo" },
@@ -117,4 +125,36 @@ const outputYs = tf.tensor2d(tensorLabels)
 // quanto mais dados melhor
 // assim o altoritmo consegue entender melhor os padrões complexos
 // dos dados
-const model = trainModel(inputXs, outputYs);
+const model = await trainModel(inputXs, outputYs);
+
+const pessoa = {
+    nome: "Zé",
+    idade: 28,
+    cor: "verde",
+    localizacao: "Curitiba"
+}
+
+// Normalizar a pessoa
+// Exemplo: idade_min = 25, idade_max = 40, idade = (28 - 25) / (40 - 25) = 0.2
+
+const pessoaTensorNormalizado = [
+    (pessoa.idade - 25) / (40 - 25),
+    1, // azul
+    0, // vermelho
+    0, // verde
+    0, // São Paulo
+    1, // Rio
+    0 // Curitiba
+];
+
+const predictions = await predict(model, pessoaTensorNormalizado);
+const results = predictions
+    .sort((a, b) => b.prob - a.prob)
+    .map(({prob, index}) => ({
+        categoria: labelsNomes[index],
+        probabilidade: `${(prob*100).toFixed(2)}%`
+    }));
+console.log(results);
+
+
+
